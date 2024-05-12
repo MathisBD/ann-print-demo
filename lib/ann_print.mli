@@ -197,15 +197,25 @@ module type Backend = sig
   (** The annotations supported by this backend. *)
   type annot
 
-  (** The output "channel" used by this backend. This could be for instance
-                a string buffer or an Html tree. *)
-  type channel
+  (** The imperative state maintained by the backend. 
+      This could be for instance a string buffer. *)
+  type state
+
+  (** The output type of the backend. This could be for instance a string. *)
+  type output
+
+  (** Create an initial state. *)
+  val initial_state : unit -> state
+
+  (** Extract a [output] from a [state]. 
+      It is assumed that we finished pretty-printing to [state]. *)
+  val get_output : state -> output
 
   (** Output a single char. *)
-  val add_char : channel -> char -> unit
+  val add_char : state -> char -> unit
 
   (** Output a substring of the given string. *)
-  val add_substring : channel -> string -> ofs:int -> len:int -> unit
+  val add_substring : state -> string -> ofs:int -> len:int -> unit
 
   (** From the point of view of the backend annotations form a stack.
                 For instance nesting annotations [a] and [b] is handled by :
@@ -216,27 +226,40 @@ module type Backend = sig
             *)
 
   (** Enter a new annotation scope. *)
-  val enter_annot : channel -> annot -> unit
+  val enter_annot : state -> annot -> unit
 
   (** Exit the most recently entered annotation scope. *)
-  val exit_annot : channel -> unit
+  val exit_annot : state -> annot -> unit
 end
 
-(** This backend works with any type of annotations (which it ignores), 
-    and uses a string Buffer as channel. *)
+(** This backend outputs raw strings, and ignores any annotation. 
+    Internally it uses a string buffer. *)
 module StringBackend (A : sig
   type t
-end) : Backend with type annot = A.t and type channel = Buffer.t
+end) : Backend with type annot = A.t and type output = string
 
-(*module XmlAnnot : Annotation with type t = int
-  module XmlBackend : Backend with module Annot = XmlAnnot*)
+(** This backend generates Xml.
+
+    It supports annotations [(tag, attribs)] which wrap their content in an Xml node 
+    with tag [tag] and attributes [attribs].
+
+    The whole document should be wrapped in an annotation for this backend to function 
+    correctly.
+    
+    The channel type is a little involved. It is a stack of [Xml.elt list].
+    Each element of the stack corresponds to an annotation scope, i.e. to an Xml node 
+    that has been opened but not yet closed. 
+    
+    The initial value of the channel should be the empty stack [Stack.create ()]. When pretty printing
+    to a channel, the resulting stack should have only one element. *)
+(*module XmlBackend : Backend with type annot = string * Xml.attrib list and type output = Xml.elt*)
 
 (**************************************************************************************)
 (** Pretty-printing to a backend. *)
 
-(** The pretty-printer can print a 'a doc to any backend that supports the right annotations.
-    For instance we can build a 'a doc once and print it using several backends. *)
+(** The pretty-printer can print a document to any backend that supports the right annotations.
+    For instance we can build a document once and print it using several backends. *)
 module Pp (B : Backend) : sig
-  (* Pretty print a 'a doc to the backend. *)
-  val pp : width:int -> B.channel -> B.annot doc -> unit
+  (* Pretty print a document using the backend. *)
+  val pp : width:int -> B.annot doc -> B.output
 end

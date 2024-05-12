@@ -64,11 +64,7 @@ let rec pp_term (t : term) : annot Ann_print.doc =
 
 let () =
   (* Test on a few terms. *)
-  let print t =
-    let buf = Buffer.create 256 in
-    PpString.pp ~width:30 buf (pp_term t);
-    Format.printf "%s\n\n" (Buffer.contents buf)
-  in
+  let print t = Format.printf "%s\n\n" (PpString.pp ~width:30 (pp_term t)) in
   print
   @@ Abs
        ( "f"
