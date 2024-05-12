@@ -8,4 +8,7 @@
  (name ann-print-demo)
  (maintainers "Mathis Bouverot-Dupuis (mathis.bouverot@ens.psl.eu)")
  (authors "Mathis Bouverot-Dupuis")
- (synopsis "A pretty-printing library."))
+ (synopsis "A pretty-printing library.")
+ (depends
+  (tyxml
+   (>= 4.6.0))))
