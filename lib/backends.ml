@@ -1,4 +1,3 @@
-open Pp
 open Tyxml
 
 module StringBackend (A : sig
@@ -50,16 +49,15 @@ module XmlBackend = struct
     (* Don't forget to reverse the list of elements. *)
     List.rev @@ Stack.top stack
 
-  (** [escape str] returns a list of Xml elements [elts] such that 
-      [str] is equivalent to [List.rev elts], and special characters (such as whitespace)
-      in [str] are converted to Xml entities. *)
-
-  (** Add a string to the current frame.
-      We use a CDATA instead of PCDATA so that the characters in the string are not parsed as Xml. *)
-  let add_string stack str = modify_top stack @@ fun frame -> Xml.cdata str :: frame
+  (** Add a (sub)string to the current frame. *)
+  let add_substring stack str ~ofs ~len =
+    (* [Xml.pcdta] automatically escapes special characters (e.g. '<' or '>') to Xml entities.
+       However it does not escape whitespace (spaces and newlines) : the resulting Xml has
+       to be rendered with style="white-space: pre" to preserve whitespace. *)
+    modify_top stack @@ fun frame -> Xml.pcdata (String.sub str ofs len) :: frame
 
   (** Add a single character to the current frame. *)
-  let add_char stack char = add_string stack (String.make 1 char)
+  let add_char stack char = add_substring stack (String.make 1 char) ~ofs:0 ~len:1
 
   (** Enter a new annotation scope, i.e. push a frame on the stack. *)
   let enter_annot stack _ = Stack.push [] stack
@@ -70,7 +68,7 @@ module XmlBackend = struct
     (* Pop the current top frame and make an Xml node/leaf out of it. *)
     let children = List.rev @@ Stack.pop stack in
     let new_elt =
-      if children = [] then Xml.leaf tag ?a:attribs else Xml.node tag ?a:attribs children
+      if children = [] then Xml.leaf tag ~a:attribs else Xml.node tag ~a:attribs children
     in
     (* Add this Xml element to the new top frame. *)
     modify_top stack @@ fun frame -> new_elt :: frame

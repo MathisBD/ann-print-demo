@@ -4,14 +4,16 @@ open Ann_print
 (**************************************************************************)
 (** Instantiate the pretty-printer. *)
 
-type annot = unit
+type annot = Backends.XmlBackend.annot
 
 module PpString = Pp.Make (Backends.StringBackend (struct
   type t = annot
 end))
 
+module PpXml = Pp.Make (Backends.XmlBackend)
+
 (**************************************************************************)
-(** Define the lambda calculus. *)
+(** Define a lambda calculus. *)
 
 (** A term variable (e.g. "x" or "y"). *)
 type var = string
@@ -32,6 +34,9 @@ type term =
 let is_arrow (ty : type_) : bool = match ty with Arrow _ -> true | _ -> false
 let is_var (t : term) : bool = match t with Var _ -> true | _ -> false
 let is_app (t : term) : bool = match t with App _ -> true | _ -> false
+
+(**************************************************************************)
+(** Print the lambda calculus. *)
 
 let paren doc =
   let open Pp in
@@ -63,9 +68,20 @@ let rec pp_term (t : term) : annot Pp.doc =
       let body = string "in" ^/^ pp_term body in
       ((binder ^//^ type_) ^//^ pp_term def) ^/^ body
 
+(**************************************************************************)
+(** Test on a few terms. *)
+
+let width = 30
+
 let () =
-  (* Test on a few terms. *)
-  let print t = Format.printf "%s\n\n" (PpString.pp ~width:30 (pp_term t)) in
+  let print t =
+    let open Tyxml in
+    let output =
+      Xml.node "span" ~a:[ Xml.string_attrib "style" "white-space: pre" ]
+      @@ PpXml.pp ~width (pp_term t)
+    in
+    Format.printf "%s\n%a\n" (String.make width '-') (Xml.pp ()) output
+  in
   print
   @@ Abs
        ( "f"
