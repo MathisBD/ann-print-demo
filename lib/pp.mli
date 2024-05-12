@@ -192,12 +192,12 @@ val ( ^//^ ) : 'a doc -> 'a doc -> 'a doc
 (** Backends. *)
 
 (** The pretty-printer works with an abstract backend.
-    A few backends are provided below, but you can define your own if needed. *)
+    This is essentially a small imperative state machine. *)
 module type Backend = sig
   (** The annotations supported by this backend. *)
   type annot
 
-  (** The imperative state maintained by the backend. 
+  (** The mutable state maintained by the backend. 
       This could be for instance a string buffer. *)
   type state
 
@@ -207,7 +207,7 @@ module type Backend = sig
   (** Create an initial state. *)
   val initial_state : unit -> state
 
-  (** Extract a [output] from a [state]. 
+  (** Extract an [output] from a [state]. This should not modify [state].
       It is assumed that we finished pretty-printing to [state]. *)
   val get_output : state -> output
 
@@ -218,12 +218,13 @@ module type Backend = sig
   val add_substring : state -> string -> ofs:int -> len:int -> unit
 
   (** From the point of view of the backend annotations form a stack.
-                For instance nesting annotations [a] and [b] is handled by :
-                - entering [a]
-                - entering [b]
-                - exiting [b]
-                - exiting [a]
-            *)
+      For instance nesting annotations [a] and [b] is handled by :
+      - entering [a]
+      - entering [b]
+      - printing the contents of [b]
+      - exiting [b]
+      - exiting [a]
+  *)
 
   (** Enter a new annotation scope. *)
   val enter_annot : state -> annot -> unit
@@ -232,34 +233,13 @@ module type Backend = sig
   val exit_annot : state -> annot -> unit
 end
 
-(** This backend outputs raw strings, and ignores any annotation. 
-    Internally it uses a string buffer. *)
-module StringBackend (A : sig
-  type t
-end) : Backend with type annot = A.t and type output = string
-
-(** This backend generates Xml.
-
-    It supports annotations [(tag, attribs)] which wrap their content in an Xml node 
-    with tag [tag] and attributes [attribs].
-
-    The whole document should be wrapped in an annotation for this backend to function 
-    correctly.
-    
-    The channel type is a little involved. It is a stack of [Xml.elt list].
-    Each element of the stack corresponds to an annotation scope, i.e. to an Xml node 
-    that has been opened but not yet closed. 
-    
-    The initial value of the channel should be the empty stack [Stack.create ()]. When pretty printing
-    to a channel, the resulting stack should have only one element. *)
-(*module XmlBackend : Backend with type annot = string * Xml.attrib list and type output = Xml.elt*)
-
 (**************************************************************************************)
 (** Pretty-printing to a backend. *)
 
-(** The pretty-printer can print a document to any backend that supports the right annotations.
+(** Instantiate the actual printer for a backend. 
+    The pretty-printer can print a document to any backend that supports the right annotations.
     For instance we can build a document once and print it using several backends. *)
-module Pp (B : Backend) : sig
+module Make (B : Backend) : sig
   (* Pretty print a document using the backend. *)
   val pp : width:int -> B.annot doc -> B.output
 end

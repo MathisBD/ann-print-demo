@@ -207,42 +207,10 @@ module type Backend = sig
   val exit_annot : state -> annot -> unit
 end
 
-module StringBackend (A : sig
-  type t
-end) =
-struct
-  type annot = A.t
-  type state = Buffer.t
-  type output = string
-
-  let initial_state () = Buffer.create 256
-  let get_output buffer = Buffer.contents buffer
-  let add_char channel char = Buffer.add_char channel char
-  let add_substring channel string ~ofs ~len = Buffer.add_substring channel string ofs len
-  let enter_annot _channel _annot = ()
-  let exit_annot _channel _annot = ()
-end
-
-(*module XmlBackend = struct
-    type annot = string * Xml.attrib list
-    type channel = Xml.elt list Stack.t
-
-    (** This assumes the stack is not empty. *)
-    let add_string stack str =
-      (* Get the topmost stack frame and add an [Xml.pcdata] element to it. *)
-      let elts = Stack.pop stack in
-      Stack.push (Xml.pcdata str :: elts) stack
-
-    (** This assumes the stack is not empty. *)
-    let add_char stack char = add_string stack (String.make 1 char)
-
-    let enter_annot stack (tag, attribs) = Stack.push [ Xml.node ] stack
-  end*)
-
 (**************************************************************************************)
 (** Pretty-printing to a backend. *)
 
-module Pp (B : Backend) = struct
+module Make (B : Backend) = struct
   (* Printing blank space (indentation characters). *)
 
   let blank_length = 80

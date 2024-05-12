@@ -1,11 +1,12 @@
 (** Using the pretty printer to format a simply typed lambda calculus. *)
+open Ann_print
 
 (**************************************************************************)
 (** Instantiate the pretty-printer. *)
 
 type annot = unit
 
-module PpString = Ann_print.Pp (Ann_print.StringBackend (struct
+module PpString = Pp.Make (Backends.StringBackend (struct
   type t = annot
 end))
 
@@ -33,11 +34,11 @@ let is_var (t : term) : bool = match t with Var _ -> true | _ -> false
 let is_app (t : term) : bool = match t with App _ -> true | _ -> false
 
 let paren doc =
-  let open Ann_print in
+  let open Pp in
   char '(' ^^ doc ^^ char ')'
 
-let rec pp_type (ty : type_) : annot Ann_print.doc =
-  let open Ann_print in
+let rec pp_type (ty : type_) : annot Pp.doc =
+  let open Pp in
   match ty with
   | Atom v -> string v
   | Arrow (t1, t2) ->
@@ -45,8 +46,8 @@ let rec pp_type (ty : type_) : annot Ann_print.doc =
       let sep = space ^^ string "->" ^^ space in
       flow sep [ pp1; pp_type t2 ]
 
-let rec pp_term (t : term) : annot Ann_print.doc =
-  let open Ann_print in
+let rec pp_term (t : term) : annot Pp.doc =
+  let open Pp in
   match t with
   | Var v -> string v
   | App (t1, t2) ->
