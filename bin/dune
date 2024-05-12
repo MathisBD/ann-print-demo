@@ -1,0 +1,4 @@
+(executable
+ (name stlc)
+ (public_name ann-print-demo.stlc)
+ (libraries ann-print-demo.lib))

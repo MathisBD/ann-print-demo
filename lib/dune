@@ -1,0 +1,3 @@
+(library
+ (name ann_print)
+ (public_name ann-print-demo.lib))
